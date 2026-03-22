@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 import torch
 import torch.nn as nn
-from mmengine.model.base_module import BaseModule
+# from mmengine.model.base_module import BaseModule
 # , auto_fp16, force_fp32
 
 # from mmseg.core import build_pixel_sampler
