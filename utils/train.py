@@ -192,11 +192,9 @@ with Engine(custom_parser=parser) as engine:
         norm_layer=BatchNorm2d,
         syncbn=args.syncbn,
     )
-    # weight=torch.load('checkpoints/NYUv2_DFormer_Large.pth')['model']
-    # w_list=list(weight.keys())
-    # # for k in w_list:
-    # #     weight[k[7:]] = weight[k]
-    # print('load model')
+    # print('load model1')
+    # weight=torch.load('checkpoints/NYUDepthv2_DFormerv2_S_20260322-181744/epoch-1_miou_1.21.pth', map_location=torch.device("cpu"))['model']
+    # print('load model2')
     # model.load_state_dict(weight)
 
     base_lr = config.lr
