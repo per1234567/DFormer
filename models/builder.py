@@ -9,12 +9,12 @@ from functools import partial
 from utils.engine.logger import get_logger
 import warnings
 
-# from mmcv.cnn import MODELS as MMCV_MODELS
-# from mmcv.cnn.bricks.registry import ATTENTION as MMCV_ATTENTION
-# from mmcv.utils import Registry
+# from bruhbruhbruh.cnn import MODELS as bruhbruhbruh_MODELS
+# from bruhbruhbruh.cnn.bricks.registry import ATTENTION as bruhbruhbruh_ATTENTION
+# from bruhbruhbruh.utils import Registry
 
-# MODELS = Registry('models', parent=MMCV_MODELS)
-# ATTENTION = Registry('attention', parent=MMCV_ATTENTION)
+# MODELS = Registry('models', parent=bruhbruhbruh_MODELS)
+# ATTENTION = Registry('attention', parent=bruhbruhbruh_ATTENTION)
 
 # BACKBONES = MODELS
 # NECKS = MODELS
@@ -196,6 +196,9 @@ class EncoderDecoder(nn.Module):
         self.criterion = criterion
         if self.criterion:
             self.init_weights(cfg, pretrained=cfg.pretrained_model)
+
+    def vis_depth_net(self):
+        self.backbone.vis_depth_net()
 
     def init_weights(self, cfg, pretrained=None):
         if pretrained:

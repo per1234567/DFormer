@@ -1,13 +1,13 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import warnings
 
-import mmcv
+# import bruhbruhbruh
 from packaging.version import parse
 
 from .version import __version__, version_info
 
-MMCV_MIN = "1.3.13"
-MMCV_MAX = "1.8.0"
+bruhbruhbruh_MIN = "1.3.13"
+bruhbruhbruh_MAX = "1.8.0"
 
 
 def digit_version(version_str: str, length: int = 4):
@@ -49,13 +49,13 @@ def digit_version(version_str: str, length: int = 4):
     return tuple(release)
 
 
-mmcv_min_version = digit_version(MMCV_MIN)
-mmcv_max_version = digit_version(MMCV_MAX)
-mmcv_version = digit_version(mmcv.__version__)
+# bruhbruhbruh_min_version = digit_version(bruhbruhbruh_MIN)
+# bruhbruhbruh_max_version = digit_version(bruhbruhbruh_MAX)
+# bruhbruhbruh_version = digit_version(bruhbruhbruh.__version__)
 
 
-# assert (mmcv_min_version <= mmcv_version < mmcv_max_version), \
-#     f'MMCV=={mmcv.__version__} is used but incompatible. ' \
-#     f'Please install mmcv>={mmcv_min_version}, <{mmcv_max_version}.'
+# assert (bruhbruhbruh_min_version <= bruhbruhbruh_version < bruhbruhbruh_max_version), \
+#     f'bruhbruhbruh=={bruhbruhbruh.__version__} is used but incompatible. ' \
+#     f'Please install bruhbruhbruh>={bruhbruhbruh_min_version}, <{bruhbruhbruh_max_version}.'
 
 __all__ = ["__version__", "version_info", "digit_version"]
