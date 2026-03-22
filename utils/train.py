@@ -56,7 +56,7 @@ torch._dynamo.config.suppress_errors = True
 
 
 def is_eval(epoch, config):
-    return epoch > int(config.checkpoint_start_epoch) or epoch == 1 or epoch % 10 == 0
+    return epoch > int(config.checkpoint_start_epoch) or epoch == 1 or epoch % 25 == 0
 
 
 class gpu_timer:
@@ -279,6 +279,7 @@ with Engine(custom_parser=parser) as engine:
     else:
         compiled_model = model
     miou, best_miou = 0.0, 0.0
+    best_macc = 0.0
     train_timer = gpu_timer()
     eval_timer = gpu_timer()
 
@@ -452,7 +453,7 @@ with Engine(custom_parser=parser) as engine:
                                 infor="_miou_" + str(miou),
                                 metric=miou,
                             )
-                        print("miou", miou, "best", best_miou)
+                        print("miou", miou, "best", best_miou, "acc", acc, "macc", macc)
             elif not engine.distributed:
                 with torch.no_grad():
                     model.eval()
@@ -515,7 +516,9 @@ with Engine(custom_parser=parser) as engine:
                         infor="_miou_" + str(miou),
                         metric=miou,
                     )
-                print("miou", miou, "best", best_miou)
+                if macc > best_macc:
+                    best_macc = macc
+                print("miou", miou, "best", best_miou, "macc", macc, "best_macc", best_macc)
             logger.info(f"Epoch {epoch} validation result: mIoU {miou}, best mIoU {best_miou}")
             eval_timer.stop()
 
