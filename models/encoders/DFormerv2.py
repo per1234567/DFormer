@@ -178,17 +178,36 @@ class GeoPriorGen(nn.Module):
         """
         depth_map = F.interpolate(depth_map, size=HW_tuple, mode="bilinear", align_corners=False)
 
-        index = torch.arange(HW_tuple[0] * HW_tuple[1]).to(self.decay)
-        sin = torch.sin(index[:, None] * self.angle[None, :])
-        sin = sin.reshape(HW_tuple[0], HW_tuple[1], -1)
-        cos = torch.cos(index[:, None] * self.angle[None, :])
-        cos = cos.reshape(HW_tuple[0], HW_tuple[1], -1)
-        mask = self.generate_pos_decay(HW_tuple[0], HW_tuple[1])
+        if split_or_not:
+            index = torch.arange(HW_tuple[0] * HW_tuple[1]).to(self.decay)
+            sin = torch.sin(index[:, None] * self.angle[None, :])
+            sin = sin.reshape(HW_tuple[0], HW_tuple[1], -1)
+            cos = torch.cos(index[:, None] * self.angle[None, :])
+            cos = cos.reshape(HW_tuple[0], HW_tuple[1], -1)
 
-        mask_d = self.generate_depth_decay(HW_tuple[0], HW_tuple[1], depth_map)
-        mask = self.weight[0] * mask + self.weight[1] * mask_d
+            mask_d_h = self.generate_1d_depth_decay(HW_tuple[0], HW_tuple[1], depth_map.transpose(-2, -1))
+            mask_d_w = self.generate_1d_depth_decay(HW_tuple[1], HW_tuple[0], depth_map)
 
-        geo_prior = ((sin, cos), mask)
+            mask_h = self.generate_1d_decay(HW_tuple[0])
+            mask_w = self.generate_1d_decay(HW_tuple[1])
+
+            mask_h = self.weight[0] * mask_h.unsqueeze(0).unsqueeze(2) + self.weight[1] * mask_d_h
+            mask_w = self.weight[0] * mask_w.unsqueeze(0).unsqueeze(2) + self.weight[1] * mask_d_w
+
+            geo_prior = ((sin, cos), (mask_h, mask_w))
+
+        else:
+            index = torch.arange(HW_tuple[0] * HW_tuple[1]).to(self.decay)
+            sin = torch.sin(index[:, None] * self.angle[None, :])
+            sin = sin.reshape(HW_tuple[0], HW_tuple[1], -1)
+            cos = torch.cos(index[:, None] * self.angle[None, :])
+            cos = cos.reshape(HW_tuple[0], HW_tuple[1], -1)
+            mask = self.generate_pos_decay(HW_tuple[0], HW_tuple[1])
+
+            mask_d = self.generate_depth_decay(HW_tuple[0], HW_tuple[1], depth_map)
+            mask = self.weight[0] * mask + self.weight[1] * mask_d
+
+            geo_prior = ((sin, cos), mask)
 
         return geo_prior
 
@@ -377,11 +396,10 @@ class RGBD_Block(nn.Module):
         self.embed_dim = embed_dim
         self.layer_norm1 = nn.LayerNorm(self.embed_dim, eps=1e-6)
         self.layer_norm2 = nn.LayerNorm(self.embed_dim, eps=1e-6)
-        # if split_or_not:
-        #     self.Attention = Decomposed_GSA(embed_dim, num_heads)
-        # else:
-        #     self.Attention = Full_GSA(embed_dim, num_heads)
-        self.Attention = Full_GSA(embed_dim, num_heads)
+        if split_or_not:
+            self.Attention = Decomposed_GSA(embed_dim, num_heads)
+        else:
+            self.Attention = Full_GSA(embed_dim, num_heads)
         self.drop_path = DropPath(drop_path)
         # FFN
         self.ffn = FeedForwardNetwork(embed_dim, ffn_dim)
@@ -524,7 +542,7 @@ class dformerv2(nn.Module):
                 ffn_dim=int(mlp_ratios[i_layer] * embed_dims[i_layer]),
                 drop_path=dpr[sum(depths[:i_layer]) : sum(depths[: i_layer + 1])],
                 norm_layer=norm_layer,
-                split_or_not=False,
+                split_or_not=(i_layer != 3),
                 downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
                 use_checkpoint=use_checkpoint,
                 layerscale=layerscales[i_layer],
