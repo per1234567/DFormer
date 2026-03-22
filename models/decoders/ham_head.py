@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from mmcv.cnn import ConvModule
+# from bruhbruhbruh.cnn import ConvModule
 
 from mmseg.ops import resize
 
@@ -150,11 +150,21 @@ class Hamburger(nn.Module):
     def __init__(self, ham_channels=512, ham_kwargs=dict(), norm_cfg=None, **kwargs):
         super().__init__()
 
-        self.ham_in = ConvModule(ham_channels, ham_channels, 1, norm_cfg=None, act_cfg=None)
+        # self.ham_in = ConvModule(ham_channels, ham_channels, 1, norm_cfg=None, act_cfg=None)
+        self.ham_in = nn.Conv2d(
+            in_channels=ham_channels, 
+            out_channels=ham_channels, 
+            kernel_size=1
+        )
 
         self.ham = NMF2D(ham_kwargs)
 
-        self.ham_out = ConvModule(ham_channels, ham_channels, 1, norm_cfg=norm_cfg, act_cfg=None)
+        self.ham_out = nn.Conv2d(
+            in_channels=ham_channels, 
+            out_channels=ham_channels, 
+            kernel_size=1
+        )
+        # self.ham_out = ConvModule(ham_channels, ham_channels, 1, norm_cfg=norm_cfg, act_cfg=None)
 
     def forward(self, x):
         enjoy = self.ham_in(x)
@@ -183,19 +193,40 @@ class LightHamHead(BaseDecodeHead):
         super(LightHamHead, self).__init__(input_transform="multiple_select", **kwargs)
         self.ham_channels = ham_channels
 
-        self.squeeze = ConvModule(
-            sum(self.in_channels),
-            self.ham_channels,
-            1,
-            conv_cfg=self.conv_cfg,
-            norm_cfg=self.norm_cfg,
-            act_cfg=self.act_cfg,
+        # self.squeeze = ConvModule(
+        #     sum(self.in_channels),
+        #     self.ham_channels,
+        #     1,
+        #     conv_cfg=self.conv_cfg,
+        #     norm_cfg=self.norm_cfg,
+        #     act_cfg=self.act_cfg,
+        # )
+
+        self.squeeze = nn.Sequential(
+            # 1. Convolution layer
+            nn.Conv2d(sum(self.in_channels), self.ham_channels, kernel_size=1, bias=False),
+
+            # 2. Normalization layer (Assuming BatchNorm2d based on typical norm_cfg)
+            nn.BatchNorm2d(self.ham_channels),
+
+            # 3. Activation layer (Assuming ReLU based on typical act_cfg)
+            nn.ReLU(inplace=True)
         )
 
         self.hamburger = Hamburger(ham_channels, ham_kwargs, **kwargs)
 
-        self.align = ConvModule(
-            self.ham_channels, self.channels, 1, conv_cfg=self.conv_cfg, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg
+        # self.align = ConvModule(
+        #     self.ham_channels, self.channels, 1, conv_cfg=self.conv_cfg, norm_cfg=self.norm_cfg, act_cfg=self.act_cfg
+        # )
+        self.align = nn.Sequential(
+            # 1. Convolution layer
+            nn.Conv2d(self.ham_channels, self.channels, kernel_size=1, bias=False),
+
+            # 2. Normalization layer (Assuming BatchNorm2d based on typical norm_cfg)
+            nn.BatchNorm2d(self.channels),
+
+            # 3. Activation layer (Assuming ReLU based on typical act_cfg)
+            nn.ReLU(inplace=True)
         )
 
     def forward(self, inputs):
