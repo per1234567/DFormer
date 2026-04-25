@@ -606,6 +606,7 @@ class SwinTransformer(nn.Module):
 
     def forward(self, x):
         # print(len(self.features))
+        x = F.interpolate(x, (224, 224), mode="bilinear", align_corners=False)
         parts = []
         for i, f in enumerate(self.features):
             x = f(x)
