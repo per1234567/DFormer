@@ -203,9 +203,13 @@ with Engine(custom_parser=parser) as engine:
     if engine.distributed:
         base_lr = config.lr
 
-    params_list = []
-    params_list = group_weight(params_list, model, BatchNorm2d, base_lr)
+    # params_list = []
+    # params_list = group_weight(params_list, model, BatchNorm2d, base_lr)
     # params_list = configure_optimizers(model, base_lr, config.weight_decay)
+
+    params_list = [
+        p for name, p in model.named_parameters() if name.startswith("decode_head")
+    ]
 
     if config.optimizer == "AdamW":
         optimizer = torch.optim.AdamW(
