@@ -56,7 +56,7 @@ torch._dynamo.config.suppress_errors = True
 
 
 def is_eval(epoch, config):
-    return epoch > int(config.checkpoint_start_epoch) or epoch == 1 or epoch % 10 == 0
+    return epoch == 1 or epoch % 25 == 0
 
 
 class gpu_timer:
