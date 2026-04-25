@@ -8,6 +8,7 @@ from functools import partial
 
 from utils.engine.logger import get_logger
 import warnings
+import torchvision.models as models
 
 # from mmcv.cnn import MODELS as MMCV_MODELS
 # from mmcv.cnn.bricks.registry import ATTENTION as MMCV_ATTENTION
@@ -98,6 +99,11 @@ class EncoderDecoder(nn.Module):
             from .encoders.DFormerv2 import DFormerv2_S as backbone
 
             self.channels = [64, 128, 256, 512]
+        elif cfg.backbone == "SWIN":
+            # C:\Users\pskul\anaconda3\envs\dformer\Lib\site-packages\torchvision\models
+            self.backbone = models.swin_t(weights='DEFAULT')
+
+            self.channels = [96, 192, 384, 768]
         else:
             raise NotImplementedError
 
@@ -106,10 +112,11 @@ class EncoderDecoder(nn.Module):
         else:
             norm_cfg = dict(type="BN", requires_grad=True)
 
-        if cfg.drop_path_rate is not None:
-            self.backbone = backbone(drop_path_rate=cfg.drop_path_rate, norm_cfg=norm_cfg)
-        else:
-            self.backbone = backbone(drop_path_rate=0.1, norm_cfg=norm_cfg)
+        if cfg.backbone != "SWIN":
+            if cfg.drop_path_rate is not None:
+                self.backbone = backbone(drop_path_rate=cfg.drop_path_rate, norm_cfg=norm_cfg)
+            else:
+                self.backbone = backbone(drop_path_rate=0.1, norm_cfg=norm_cfg)
 
         self.aux_head = None
 
@@ -227,9 +234,10 @@ class EncoderDecoder(nn.Module):
         map of the same size as input."""
         orisize = rgb.shape
         # print('builder',rgb.shape,modal_x.shape)
-        x = self.backbone(rgb, modal_x)
-        if len(x) == 2:  # if output is (rgb,depth) only use rgb
-            x = x[0]
+        x = self.backbone(rgb)
+        # print(x.shape)
+        # if len(x) == 2:  # if output is (rgb,depth) only use rgb
+        #     x = x[0]
         out = self.decode_head.forward(x)
         out = F.interpolate(out, size=orisize[-2:], mode="bilinear", align_corners=False)
         if self.aux_head:

@@ -1,4 +1,4 @@
-GPUS=2
+GPUS=1
 NNODES=1
 NODE_RANK=${NODE_RANK:-0}
 PORT=${PORT:-29158}
@@ -43,3 +43,4 @@ PYTHONPATH="$(dirname $0)/..":"$(dirname $0)":$PYTHONPATH \
 # local_configs.SUNRGBD.DFormer_v2_S
 # local_configs.SUNRGBD.DFormer_v2_B
 # local_configs.SUNRGBD.DFormer_v2_L
+# --config=local_configs.Toy.Toy --gpus=$GPUS \
