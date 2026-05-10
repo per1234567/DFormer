@@ -32,7 +32,6 @@ def random_scale(rgb, gt, modal_x, scales):
 
     return rgb, gt, modal_x, scale
 
-
 class TrainPre(object):
     def __init__(self, norm_mean, norm_std, sign=False, config=None):
         self.config = config
@@ -168,10 +167,10 @@ def get_train_loader(engine, dataset, config):
     is_shuffle = True
     batch_size = config.batch_size
 
-    if engine.distributed:
-        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
-        batch_size = config.batch_size // engine.world_size
-        is_shuffle = False
+    # if engine.distributed:
+    #     train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+    #     batch_size = config.batch_size // engine.world_size
+    #     is_shuffle = False
 
     train_loader = data.DataLoader(
         train_dataset,
@@ -213,10 +212,10 @@ def get_val_loader(engine, dataset, config, val_batch_size=1):
     is_shuffle = False
     batch_size = val_batch_size
 
-    if engine.distributed:
-        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
-        batch_size = val_batch_size // engine.world_size
-        is_shuffle = False
+    # if engine.distributed:
+    #     val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+    #     batch_size = val_batch_size // engine.world_size
+    #     is_shuffle = False
 
     val_loader = data.DataLoader(
         val_dataset,

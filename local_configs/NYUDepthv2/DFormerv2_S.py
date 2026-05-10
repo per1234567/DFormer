@@ -1,7 +1,7 @@
 from .._base_.datasets.NYUDepthv2 import *
 
 """ Settings for network, this would be different for each kind of model"""
-C.backbone = "SWIN"  # Remember change the path below.
+C.backbone = "ViT"  # Remember change the path below.
 # C.backbone = "DFormerv2_S"
 # C.pretrained_model = "checkpoints/pretrained/DFormerv2_Small_pretrained.pth"
 C.pretrained_model = None
@@ -10,11 +10,11 @@ C.decoder_embed_dim = 512
 C.optimizer = "AdamW"
 
 """Train Config"""
-C.lr = 4 * 6e-5
+C.lr = 6e-5
 C.lr_power = 0.9
 C.momentum = 0.9
 C.weight_decay = 0.01
-C.batch_size = 64
+C.batch_size = 16
 C.nepochs = 500
 C.niters_per_epoch = C.num_train_imgs // C.batch_size + 1
 C.num_workers = 0

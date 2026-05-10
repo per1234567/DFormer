@@ -4,7 +4,27 @@ import torch
 import numpy as np
 
 import torch.utils.data as data
+from transformers import AutoModelForDepthEstimation
+from torchvision.transforms import functional as TF
+import torch.nn.functional as F
 
+# depth_model = AutoModelForDepthEstimation.from_pretrained(
+#     "depth-anything/Depth-Anything-V2-Small-hf",
+#     dtype=torch.float32
+# ).to("cuda").eval()
+
+def depth_values(depth_model, images, sigma=None):
+    with torch.inference_mode(), torch.amp.autocast('cuda'):
+        outputs = depth_model(pixel_values=images)
+    # print(outputs.predicted_depth.shape)
+    parts = F.interpolate(outputs.predicted_depth.unsqueeze(1), size=(224, 224), mode="bilinear", align_corners=False)
+    if sigma is not None:
+        parts += sigma * torch.randn_like(parts)
+    parts = (parts - 1.4004) / 0.9077
+    return parts
+
+def depth_norm(X):
+    return X * 0.8504860838004041 + -0.27954334078356624
 
 def get_path(
     dataset_name,
@@ -191,10 +211,23 @@ class RGBXDataset(data.Dataset):
         if self.preprocess is not None:
             rgb, gt, x = self.preprocess(rgb, gt, x)
 
-        rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float()
-        gt = torch.from_numpy(np.ascontiguousarray(gt)).long()
-        # for modal in x:
-        x = torch.from_numpy(np.ascontiguousarray(x)).float()
+        rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float().unsqueeze(0)
+        gt = torch.from_numpy(np.ascontiguousarray(gt)).long().unsqueeze(0)
+        x_old = torch.from_numpy(np.ascontiguousarray(x)).float().unsqueeze(0)
+        # print(x.shape)
+        # bruh
+        rgb = TF.resize(rgb, [224, 224],
+                    interpolation=TF.InterpolationMode.BILINEAR)
+        gt  = TF.resize(gt,  [224, 224],
+                    interpolation=TF.InterpolationMode.NEAREST)
+        x = TF.resize(x_old, [224, 224],
+                    interpolation=TF.InterpolationMode.BILINEAR)
+        x = depth_values(x.to("cuda")).to("cpu").repeat(1, 3, 1, 1)
+        x = x * 0.8504860838004041 + -0.27954334078356624
+        assert x.shape == x_old.shape, "bad x shape"
+        assert x.dtype == x_old.dtype, "bad x dtype"
+        assert x.device == x_old.device, "bad x device"
+        print("LOAD ", index)
 
         # if self._split_name == "train":
         #     rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float()

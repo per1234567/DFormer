@@ -99,11 +99,11 @@ class EncoderDecoder(nn.Module):
             from .encoders.DFormerv2 import DFormerv2_S as backbone
 
             self.channels = [64, 128, 256, 512]
-        elif cfg.backbone == "SWIN":
+        elif cfg.backbone == "ViT":
             # C:\Users\pskul\anaconda3\envs\dformer\Lib\site-packages\torchvision\models
-            self.backbone = models.swin_t(weights='DEFAULT')
+            self.backbone = models.vit_b_16(weights=None)
 
-            self.channels = [96, 192, 384, 768]
+            self.channels = [768]
         else:
             raise NotImplementedError
 
@@ -112,7 +112,7 @@ class EncoderDecoder(nn.Module):
         else:
             norm_cfg = dict(type="BN", requires_grad=True)
 
-        if cfg.backbone != "SWIN":
+        if cfg.backbone != "ViT":
             if cfg.drop_path_rate is not None:
                 self.backbone = backbone(drop_path_rate=cfg.drop_path_rate, norm_cfg=norm_cfg)
             else:
@@ -138,9 +138,9 @@ class EncoderDecoder(nn.Module):
 
             # from mmseg.models.decode_heads.ham_head import LightHamHead as DecoderHead
             self.decode_head = DecoderHead(
-                in_channels=self.channels[1:],
+                in_channels=self.channels,
                 num_classes=cfg.num_classes,
-                in_index=[1, 2, 3],
+                in_index=[0],
                 norm_cfg=norm_cfg,
                 channels=cfg.decoder_embed_dim,
             )

@@ -192,12 +192,10 @@ with Engine(custom_parser=parser) as engine:
         norm_layer=BatchNorm2d,
         syncbn=args.syncbn,
     )
-    # weight=torch.load('checkpoints/NYUv2_DFormer_Large.pth')['model']
-    # w_list=list(weight.keys())
-    # # for k in w_list:
-    # #     weight[k[7:]] = weight[k]
-    # print('load model')
-    # model.load_state_dict(weight)
+    weight=torch.load('checkpoints/custom_4ch_vit_checkpoint.pt')
+    print('load model')
+    new_state_dict = {k: v for k, v in weight.items() if "heads" not in k}
+    model.load_state_dict(new_state_dict)
 
     base_lr = config.lr
     if engine.distributed:
