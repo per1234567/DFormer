@@ -45,10 +45,10 @@ class TrainPre(object):
             rgb, gt, modal_x, scale = random_scale(rgb, gt, modal_x, self.config.train_scale_array)
 
         rgb = normalize(rgb, self.norm_mean, self.norm_std)
-        if self.sign:
-            modal_x = normalize(modal_x, [0.48, 0.48, 0.48], [0.28, 0.28, 0.28])  # [0.5,0.5,0.5]
-        else:
-            modal_x = normalize(modal_x, self.norm_mean, self.norm_std)
+        # if self.sign:
+        #     modal_x = normalize(modal_x, [0.48, 0.48, 0.48], [0.28, 0.28, 0.28])  # [0.5,0.5,0.5]
+        # else:
+        #     modal_x = normalize(modal_x, self.norm_mean, self.norm_std)
 
         # return rgb.transpose(2, 0, 1), gt, modal_x.transpose(2, 0, 1)
 

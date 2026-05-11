@@ -8,13 +8,13 @@ from transformers import AutoModelForDepthEstimation
 from torchvision.transforms import functional as TF
 import torch.nn.functional as F
 
-# depth_model = AutoModelForDepthEstimation.from_pretrained(
-#     "depth-anything/Depth-Anything-V2-Small-hf",
-#     dtype=torch.float32
-# ).to("cuda").eval()
+depth_model = AutoModelForDepthEstimation.from_pretrained(
+    "depth-anything/Depth-Anything-V2-Small-hf",
+    dtype=torch.float32
+).to("cuda").eval()
 
-def depth_values(depth_model, images, sigma=None):
-    with torch.inference_mode(), torch.amp.autocast('cuda'):
+def depth_values(images, sigma=None):
+    with torch.inference_mode():
         outputs = depth_model(pixel_values=images)
     # print(outputs.predicted_depth.shape)
     parts = F.interpolate(outputs.predicted_depth.unsqueeze(1), size=(224, 224), mode="bilinear", align_corners=False)
@@ -128,7 +128,6 @@ def get_path(
         path_result[modal + "_path"] = eval(modal + "_path")
     return path_result
 
-
 class RGBXDataset(data.Dataset):
     def __init__(self, setting, split_name, preprocess=None, file_length=None):
         super(RGBXDataset, self).__init__()
@@ -222,12 +221,11 @@ class RGBXDataset(data.Dataset):
                     interpolation=TF.InterpolationMode.NEAREST)
         x = TF.resize(x_old, [224, 224],
                     interpolation=TF.InterpolationMode.BILINEAR)
-        x = depth_values(x.to("cuda")).to("cpu").repeat(1, 3, 1, 1)
+        x = depth_values(rgb.to("cuda")).to("cpu")
         x = x * 0.8504860838004041 + -0.27954334078356624
-        assert x.shape == x_old.shape, "bad x shape"
+        # assert x.shape == x_old.shape, "bad x shape"
         assert x.dtype == x_old.dtype, "bad x dtype"
         assert x.device == x_old.device, "bad x device"
-        print("LOAD ", index)
 
         # if self._split_name == "train":
         #     rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float()
@@ -238,8 +236,7 @@ class RGBXDataset(data.Dataset):
         #     gt = torch.from_numpy(np.ascontiguousarray(gt)).long()
         #     x = torch.from_numpy(np.ascontiguousarray(x)).float()
 
-        output_dict = dict(data=rgb, label=gt, modal_x=x, fn=str(path_dict["rgb_path"]), n=len(self._file_names))
-
+        output_dict = dict(data=rgb.squeeze(0), label=gt.squeeze(0), modal_x=x.squeeze(0), fn=str(path_dict["rgb_path"]), n=len(self._file_names))
         return output_dict
 
     def _get_file_names(self, split_name):

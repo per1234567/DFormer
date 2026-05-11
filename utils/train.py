@@ -194,8 +194,7 @@ with Engine(custom_parser=parser) as engine:
     )
     weight=torch.load('checkpoints/custom_4ch_vit_checkpoint.pt')
     print('load model')
-    new_state_dict = {k: v for k, v in weight.items() if "heads" not in k}
-    model.load_state_dict(new_state_dict)
+    model.load_state_dict(weight)
 
     base_lr = config.lr
     if engine.distributed:

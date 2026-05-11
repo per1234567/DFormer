@@ -234,10 +234,10 @@ class EncoderDecoder(nn.Module):
         map of the same size as input."""
         orisize = rgb.shape
         # print('builder',rgb.shape,modal_x.shape)
-        x = self.backbone(rgb)
-        # print(x.shape)
+        x = self.backbone(rgb, modal_x)
         # if len(x) == 2:  # if output is (rgb,depth) only use rgb
         #     x = x[0]
+        x = (x[:,1:,:].permute(0, 2, 1).contiguous().view(-1, 768, 14, 14),)
         out = self.decode_head.forward(x)
         out = F.interpolate(out, size=orisize[-2:], mode="bilinear", align_corners=False)
         if self.aux_head:
