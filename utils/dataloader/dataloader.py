@@ -132,7 +132,7 @@ class ValPre(object):
         # )
 
         rgb = normalize(rgb, self.norm_mean, self.norm_std)
-        modal_x = normalize(modal_x, [0.48, 0.48, 0.48], [0.28, 0.28, 0.28])
+        # modal_x = normalize(modal_x, [0.48, 0.48, 0.48], [0.28, 0.28, 0.28])
         return rgb.transpose(2, 0, 1), gt, modal_x.transpose(2, 0, 1)
         # return rgb, gt, modal_x
 

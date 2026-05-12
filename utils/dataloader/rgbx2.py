@@ -7,7 +7,6 @@ import torch.utils.data as data
 from transformers import AutoModelForDepthEstimation
 from torchvision.transforms import functional as TF
 import torch.nn.functional as F
-import h5py
 
 depth_model = AutoModelForDepthEstimation.from_pretrained(
     "depth-anything/Depth-Anything-V2-Small-hf",
@@ -23,10 +22,6 @@ def depth_values(images, sigma=None):
         parts += sigma * torch.randn_like(parts)
     parts = (parts - 1.4004) / 0.9077
     return parts
-
-# wget http://horatio.cs.nyu.edu/mit/silberman/nyu_depth_v2/nyu_depth_v2_labeled.mat
-nyu_depth_handle = h5py.File('nyu_depth_v2_labeled.mat')
-nyu_depths_normalized = -(np.array(nyu_depth_handle["depths"][:1449], dtype=np.float32) - 2.7963147) / 1.3860521
 
 def depth_norm(X):
     return X * 0.8504860838004041 + -0.27954334078356624
@@ -133,6 +128,9 @@ def get_path(
         path_result[modal + "_path"] = eval(modal + "_path")
     return path_result
 
+XMEM = torch.empty((1449, 1, 224, 224), device="cpu", dtype=torch.float32)
+XSEEN = set()
+
 class RGBXDataset(data.Dataset):
     def __init__(self, setting, split_name, preprocess=None, file_length=None):
         super(RGBXDataset, self).__init__()
@@ -161,6 +159,7 @@ class RGBXDataset(data.Dataset):
         return len(self._file_names)
 
     def __getitem__(self, index):
+        global XMEM, XSEEN
         if self._file_length is not None:
             item_name = self._construct_new_file_names(self._file_length)[index]
         else:
@@ -187,16 +186,15 @@ class RGBXDataset(data.Dataset):
         if self._transform_gt:
             gt = self._gt_transform(gt)
 
-        # x = {}
-        # for modal in self.x_modal:
-        #     if modal == "d":
-        #         x[modal] = self._open_image(path_dict[modal + "_path"], cv2.IMREAD_GRAYSCALE)
-        #         x[modal] = cv2.merge([x[modal], x[modal], x[modal]])
-        #     else:
-        #         x[modal] = self._open_image(path_dict[modal + "_path"], "RGB")
-        # if len(self.x_modal) == 1:
-        #     x = x[self.x_modal[0]]
-        x = nyu_depths_normalized[index]
+        x = {}
+        for modal in self.x_modal:
+            if modal == "d":
+                x[modal] = self._open_image(path_dict[modal + "_path"], cv2.IMREAD_GRAYSCALE)
+                x[modal] = cv2.merge([x[modal], x[modal], x[modal]])
+            else:
+                x[modal] = self._open_image(path_dict[modal + "_path"], "RGB")
+        if len(self.x_modal) == 1:
+            x = x[self.x_modal[0]]
 
         if self.dataset_name == "Scannet":
             rgb = cv2.resize(rgb, (640, 480), interpolation=cv2.INTER_LINEAR)
@@ -213,38 +211,30 @@ class RGBXDataset(data.Dataset):
         # else:
         #     x = self._open_image(x_path, cv2.COLOR_BGR2RGB)
 
-        if self.preprocess is not None:
-            rgb, gt, x = self.preprocess(rgb, gt, x)
-
-        rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float().unsqueeze(0)
+        rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float().permute(2, 0, 1).unsqueeze(0)
         gt = torch.from_numpy(np.ascontiguousarray(gt)).long().unsqueeze(0)
-        x_old = torch.from_numpy(np.ascontiguousarray(x)).float().unsqueeze(0)
-        # print(x.shape)
-        # bruh
+        # x_old = torch.from_numpy(np.ascontiguousarray(x)).float().unsqueeze(0)
         rgb = TF.resize(rgb, [224, 224],
                     interpolation=TF.InterpolationMode.BILINEAR)
         gt  = TF.resize(gt,  [224, 224],
                     interpolation=TF.InterpolationMode.NEAREST)
-        x = TF.resize(x_old, [224, 224],
-                    interpolation=TF.InterpolationMode.BILINEAR)
-        # x = depth_values(rgb.to("cuda")).to("cpu")
-        # x = (255.0 - x) / 255.0
-        # x = (x - 0.51764077) / 0.2942308
-        x = x * 0.8504860838004041 + -0.27954334078356624
-        # assert x.shape == x_old.shape, "bad x shape"
-        assert x.dtype == x_old.dtype, "bad x dtype"
-        assert x.device == x_old.device, "bad x device"
+        # x = TF.resize(x_old, [224, 224],
+        #             interpolation=TF.InterpolationMode.BILINEAR)
 
-        # if self._split_name == "train":
-        #     rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float()
-        #     gt = torch.from_numpy(np.ascontiguousarray(gt)).long()
-        #     x = torch.from_numpy(np.ascontiguousarray(x)).float()
-        # else:
-        #     rgb = torch.from_numpy(np.ascontiguousarray(rgb)).float()
-        #     gt = torch.from_numpy(np.ascontiguousarray(gt)).long()
-        #     x = torch.from_numpy(np.ascontiguousarray(x)).float()
+        X_mean = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+        X_std = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+        # print(X.shape)
+        rgb = (rgb / 255.0 - X_mean) / X_std
 
-        output_dict = dict(data=rgb.squeeze(0), label=gt.squeeze(0), modal_x=x.squeeze(0), fn=str(path_dict["rgb_path"]), n=len(self._file_names))
+        x = None
+        if index in XSEEN:
+            x = XMEM[index]
+        else:
+            x = depth_values(rgb.to("cuda")).squeeze(0).cpu() * 0.8504860838004041 + -0.27954334078356624
+            XMEM[index] = x
+            XSEEN.add(index)
+
+        output_dict = dict(data=rgb.squeeze(0), label=gt.squeeze(0), modal_x=x, fn=str(path_dict["rgb_path"]), n=len(self._file_names))
         return output_dict
 
     def _get_file_names(self, split_name):

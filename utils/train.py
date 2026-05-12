@@ -194,7 +194,7 @@ with Engine(custom_parser=parser) as engine:
     )
     weight=torch.load('checkpoints/custom_4ch_vit_checkpoint.pt')
     print('load model')
-    model.load_state_dict(weight)
+    model.backbone.load_state_dict(weight)
 
     base_lr = config.lr
     if engine.distributed:
@@ -204,9 +204,7 @@ with Engine(custom_parser=parser) as engine:
     # params_list = group_weight(params_list, model, BatchNorm2d, base_lr)
     # params_list = configure_optimizers(model, base_lr, config.weight_decay)
 
-    params_list = [
-        p for name, p in model.named_parameters() if name.startswith("decode_head")
-    ]
+    params_list = model.parameters()
 
     if config.optimizer == "AdamW":
         optimizer = torch.optim.AdamW(
